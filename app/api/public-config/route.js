@@ -15,6 +15,8 @@ function getDefaultConfig() {
   return {
     enabled: true,
     showSorting: true,
+    showSearch: true,
+    filterAccordionDefaultOpen: true,
     grid: {
       mobile: 2,
       tablet: 3,
@@ -39,6 +41,8 @@ function parseStoredConfig(existingConfigValue) {
     return {
       enabled: parsed?.enabled ?? true,
       showSorting: parsed?.showSorting ?? true,
+      showSearch: parsed?.showSearch ?? true,
+      filterAccordionDefaultOpen: parsed?.filterAccordionDefaultOpen ?? true,
       grid: parsed?.grid || {
         mobile: 2,
         tablet: 3,

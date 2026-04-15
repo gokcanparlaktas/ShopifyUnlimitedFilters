@@ -40,6 +40,11 @@ const STRINGS = {
     backToShop: "Back to Shopify",
     moveUp: "Move up",
     moveDown: "Move down",
+    displayTitle: "Display settings",
+    displayHint: "Control how filters appear on the storefront.",
+    showSorting: "Show sorting",
+    showSearch: "Show search",
+    accordionOpen: "Open filter accordions by default",
   },
   tr: {
     brandTitle: "Unlimited Filters",
@@ -75,6 +80,11 @@ const STRINGS = {
     backToShop: "Mağazaya dön",
     moveUp: "Yukarı al",
     moveDown: "Aşağı al",
+    displayTitle: "Görünüm ayarları",
+    displayHint: "Filtrelerin storefront tarafında nasıl görüneceğini yönetin.",
+    showSorting: "Sıralamayı göster",
+    showSearch: "Aramayı göster",
+    accordionOpen: "Filtre accordion'ları varsayılan olarak açık olsun",
   },
 };
 
@@ -201,6 +211,9 @@ export default function HomePage() {
   const [uiLocale, setUiLocale] = useState("en");
   const [draggingFilterId, setDraggingFilterId] = useState(null);
   const [dragOverFilterId, setDragOverFilterId] = useState(null);
+  const [showSorting, setShowSorting] = useState(true);
+  const [showSearch, setShowSearch] = useState(true);
+  const [filterAccordionDefaultOpen, setFilterAccordionDefaultOpen] = useState(true);
 
   useEffect(function () {
     const locale = detectUiLang();
@@ -260,11 +273,13 @@ export default function HomePage() {
           Array.isArray(definitionsJson.definitions) ? definitionsJson.definitions : []
         );
 
-        const filters = Array.isArray(configJson.config?.filters)
-          ? configJson.config.filters
-          : [];
+        const config = configJson.config || {};
+        const filters = Array.isArray(config.filters) ? config.filters : [];
 
         setSelectedFilters(filters);
+        setShowSorting(config.showSorting !== false);
+        setShowSearch(config.showSearch !== false);
+        setFilterAccordionDefaultOpen(config.filterAccordionDefaultOpen !== false);
       } catch (err) {
         if (cancelled) {
           return;
@@ -532,7 +547,9 @@ export default function HomePage() {
         },
         body: JSON.stringify({
           enabled: true,
-          showSorting: true,
+          showSorting,
+          showSearch,
+          filterAccordionDefaultOpen,
           grid: {
             mobile: 2,
             tablet: 3,
@@ -652,6 +669,15 @@ export default function HomePage() {
     border: "none",
     borderRadius: t.radiusSm,
     transition: "background 0.15s ease, color 0.15s ease",
+  };
+
+  const settingRow = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "10px 0",
+    borderTop: `1px solid ${t.border}`,
   };
 
   const C = STRINGS[uiLocale] || STRINGS.en;
@@ -1187,7 +1213,7 @@ export default function HomePage() {
                             boxShadow: t.shadowSm,
                             borderColor: isDragOver
                               ? "rgba(1, 30, 136, 0.35)"
-                              : card.border,
+                              : t.border,
                             outline: isDragOver
                               ? "2px solid rgba(1, 30, 136, 0.18)"
                               : "none",
@@ -1347,6 +1373,66 @@ export default function HomePage() {
                     })}
                   </div>
                 )}
+
+                <div
+                  style={{
+                    marginTop: 18,
+                    paddingTop: 2,
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: "0 0 6px",
+                      fontSize: 15,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {C.displayTitle}
+                  </h3>
+                  <p
+                    style={{
+                      margin: "0 0 8px",
+                      fontSize: 13,
+                      color: t.textMuted,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {C.displayHint}
+                  </p>
+
+                  <label style={settingRow}>
+                    <span style={{ fontSize: 14, color: t.text }}>{C.showSorting}</span>
+                    <input
+                      type="checkbox"
+                      checked={showSorting}
+                      onChange={function (e) {
+                        setShowSorting(e.target.checked);
+                      }}
+                    />
+                  </label>
+
+                  <label style={settingRow}>
+                    <span style={{ fontSize: 14, color: t.text }}>{C.showSearch}</span>
+                    <input
+                      type="checkbox"
+                      checked={showSearch}
+                      onChange={function (e) {
+                        setShowSearch(e.target.checked);
+                      }}
+                    />
+                  </label>
+
+                  <label style={settingRow}>
+                    <span style={{ fontSize: 14, color: t.text }}>{C.accordionOpen}</span>
+                    <input
+                      type="checkbox"
+                      checked={filterAccordionDefaultOpen}
+                      onChange={function (e) {
+                        setFilterAccordionDefaultOpen(e.target.checked);
+                      }}
+                    />
+                  </label>
+                </div>
 
                 <button
                   type="button"
