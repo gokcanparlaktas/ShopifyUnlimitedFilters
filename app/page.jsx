@@ -103,7 +103,7 @@ const STRINGS = {
     showSearch: "Aramayı göster",
     accordionOpen: "Filtre accordion'ları varsayılan olarak açık olsun",
     perFilterAccordionOpen: "Bu filtre açık başlasın",
-    perFilterOptionsSearch: "Seçenek araması",
+    perFilterOptionsSearch: "Filtre İçinde Arama",
     howToUse: "Nasıl kullanılır?",
     howToUseTitle: "Unlimited Filters nasıl kullanılır?",
     howToUseClose: "Kapat",
@@ -248,7 +248,6 @@ export default function HomePage() {
   const [showSorting, setShowSorting] = useState(true);
   const [showSearch, setShowSearch] = useState(true);
   const [filterAccordionDefaultOpen, setFilterAccordionDefaultOpen] = useState(true);
-  const [howToOpen, setHowToOpen] = useState(false);
 
   useEffect(function () {
     const locale = detectUiLang();
@@ -984,7 +983,7 @@ export default function HomePage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+                gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)",
                 gap: 20,
                 alignItems: "start",
               }}
@@ -1093,18 +1092,35 @@ export default function HomePage() {
                         {C.emptyStandardSearch}
                       </div>
                     ) : (
-                      standardFiltered.map(function (filter) {
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: 10,
+                        }}
+                      >
+                        {standardFiltered.map(function (filter) {
                         const isAdded = selectedFilters.some(function (selected) {
                           return selected.id === filter.id;
                         });
 
                         return (
-                          <div key={filter.id} style={card}>
-                            <div style={{ fontWeight: 700, fontSize: 15 }}>
+                          <div
+                            key={filter.id}
+                            style={{
+                              ...card,
+                              padding: 12,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 6,
+                              aspectRatio: "1 / 1",
+                            }}
+                          >
+                            <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.25 }}>
                               {getFilterLabel(filter)}
                             </div>
 
-                            <div style={{ fontSize: 13, color: t.textMuted, marginTop: 4 }}>
+                            <div style={{ fontSize: 12, color: t.textMuted }}>
                               {formatFilterFieldKey(filter.key)} · {C.typeLabel}:{" "}
                               {formatType(filter.type)}
                             </div>
@@ -1130,7 +1146,8 @@ export default function HomePage() {
                               disabled={isAdded}
                               style={{
                                 ...btnPrimary,
-                                marginTop: 12,
+                                marginTop: "auto",
+                                minHeight: 38,
                                 opacity: isAdded ? 0.55 : 1,
                                 cursor: isAdded ? "default" : "pointer",
                                 background: isAdded ? t.textMuted : t.accent,
@@ -1141,7 +1158,8 @@ export default function HomePage() {
                             </button>
                           </div>
                         );
-                      })
+                      })}
+                      </div>
                     )
                   ) : definitionsFiltered.length === 0 ? (
                     <div
@@ -1158,16 +1176,35 @@ export default function HomePage() {
                       {definitions.length === 0 ? C.emptyCustomNone : C.emptyCustomSearch}
                     </div>
                   ) : (
-                    definitionsFiltered.map(function (item) {
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                        gap: 10,
+                      }}
+                    >
+                      {definitionsFiltered.map(function (item) {
                       const isAdded = selectedFilters.some(function (selected) {
                         return selected.id === item.suggestedFilter.id;
                       });
 
                       return (
-                        <div key={item.id} style={card}>
-                          <div style={{ fontWeight: 700, fontSize: 15 }}>{item.name}</div>
+                        <div
+                          key={item.id}
+                          style={{
+                            ...card,
+                            padding: 12,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 6,
+                            aspectRatio: "1 / 1",
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.25 }}>
+                            {item.name}
+                          </div>
 
-                          <div style={{ fontSize: 13, color: t.text, marginTop: 4 }}>
+                          <div style={{ fontSize: 12, color: t.text }}>
                             <span style={{ fontFamily: "ui-monospace, monospace" }}>
                               {item.namespace}
                             </span>
@@ -1175,23 +1212,12 @@ export default function HomePage() {
                             <span>{formatFilterFieldKey(item.key)}</span>
                           </div>
 
-                          <div style={{ fontSize: 13, color: t.textMuted, marginTop: 4 }}>
+                          <div style={{ fontSize: 12, color: t.textMuted }}>
                             {C.typeLabel}: {formatType(item.type)}{" "}
                             {item.category ? `(${item.category})` : ""}
                           </div>
 
-                          {item.description ? (
-                            <div
-                              style={{
-                                marginTop: 10,
-                                fontSize: 13,
-                                color: t.textMuted,
-                                lineHeight: 1.45,
-                              }}
-                            >
-                              {item.description}
-                            </div>
-                          ) : null}
+                          {/* keep tiles compact; description intentionally omitted */}
 
                           <button
                             type="button"
@@ -1201,7 +1227,8 @@ export default function HomePage() {
                             disabled={isAdded}
                             style={{
                               ...btnPrimary,
-                              marginTop: 12,
+                              marginTop: "auto",
+                              minHeight: 38,
                               opacity: isAdded ? 0.55 : 1,
                               cursor: isAdded ? "default" : "pointer",
                               background: isAdded ? t.textMuted : t.accent,
@@ -1212,10 +1239,64 @@ export default function HomePage() {
                           </button>
                         </div>
                       );
-                    })
+                    })}
+                    </div>
                   )}
                 </div>
               </div>
+
+              <aside
+                style={{
+                  ...panel,
+                  position: "sticky",
+                  top: 16,
+                  alignSelf: "start",
+                }}
+              >
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: 17,
+                    fontWeight: 700,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {C.howToUseTitle}
+                </h2>
+                <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted }}>
+                  {uiLocale === "tr"
+                    ? "Kurulum adımlarını takip ederek 5 dakikada aktif edebilirsin."
+                    : "Follow these steps to get set up in minutes."}
+                </p>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  {[
+                    { title: C.howToUseStep1Title, body: C.howToUseStep1Body },
+                    { title: C.howToUseStep2Title, body: C.howToUseStep2Body },
+                    { title: C.howToUseStep3Title, body: C.howToUseStep3Body },
+                    { title: C.howToUseStep4Title, body: C.howToUseStep4Body },
+                  ].map(function (step) {
+                    return (
+                      <div
+                        key={step.title}
+                        style={{
+                          border: `1px solid ${t.border}`,
+                          borderRadius: 14,
+                          padding: 12,
+                          background: t.surface,
+                        }}
+                      >
+                        <div style={{ fontWeight: 800, marginBottom: 6, fontSize: 13 }}>
+                          {step.title}
+                        </div>
+                        <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.55 }}>
+                          {step.body}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </aside>
 
               <aside
                 className="uf-aside"
@@ -1240,26 +1321,6 @@ export default function HomePage() {
                 <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted }}>
                   {C.selectedHint}
                 </p>
-
-                <button
-                  type="button"
-                  onClick={function () {
-                    setHowToOpen(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    minHeight: 40,
-                    borderRadius: t.radiusMd,
-                    border: `1px solid ${t.borderStrong}`,
-                    background: t.surfaceMuted,
-                    color: t.text,
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    marginBottom: 12,
-                  }}
-                >
-                  {C.howToUse}
-                </button>
 
                 {selectedFilters.length === 0 ? (
                   <div
@@ -1628,100 +1689,6 @@ export default function HomePage() {
           ) : null}
         </div>
       </main>
-
-      {howToOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={function () {
-            setHowToOpen(false);
-          }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.45)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            zIndex: 9999,
-          }}
-        >
-          <div
-            onClick={function (e) {
-              e.stopPropagation();
-            }}
-            style={{
-              width: "min(720px, 100%)",
-              background: t.surface,
-              borderRadius: 16,
-              border: `1px solid ${t.borderStrong}`,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: "14px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-                borderBottom: `1px solid ${t.border}`,
-                background: t.surfaceMuted,
-              }}
-            >
-              <div style={{ fontWeight: 800, letterSpacing: "-0.01em" }}>
-                {C.howToUseTitle}
-              </div>
-              <button
-                type="button"
-                onClick={function () {
-                  setHowToOpen(false);
-                }}
-                style={{
-                  minHeight: 34,
-                  padding: "0 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.borderStrong}`,
-                  background: t.surface,
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                {C.howToUseClose}
-              </button>
-            </div>
-
-            <div style={{ padding: 16, display: "grid", gap: 12 }}>
-              {[
-                { title: C.howToUseStep1Title, body: C.howToUseStep1Body },
-                { title: C.howToUseStep2Title, body: C.howToUseStep2Body },
-                { title: C.howToUseStep3Title, body: C.howToUseStep3Body },
-                { title: C.howToUseStep4Title, body: C.howToUseStep4Body },
-              ].map(function (step) {
-                return (
-                  <div
-                    key={step.title}
-                    style={{
-                      border: `1px solid ${t.border}`,
-                      borderRadius: 14,
-                      padding: 14,
-                      background: t.surface,
-                    }}
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                      {step.title}
-                    </div>
-                    <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-                      {step.body}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
