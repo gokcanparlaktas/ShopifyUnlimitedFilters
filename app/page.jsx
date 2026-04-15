@@ -248,6 +248,7 @@ export default function HomePage() {
   const [showSorting, setShowSorting] = useState(true);
   const [showSearch, setShowSearch] = useState(true);
   const [filterAccordionDefaultOpen, setFilterAccordionDefaultOpen] = useState(true);
+  const [howToOpen, setHowToOpen] = useState(false);
 
   useEffect(function () {
     const locale = detectUiLang();
@@ -264,6 +265,31 @@ export default function HomePage() {
   useEffect(function () {
     document.documentElement.lang = uiLocale === "tr" ? "tr" : "en";
   }, [uiLocale]);
+
+  useEffect(
+    function () {
+      if (!howToOpen) return;
+
+      function onKeyDown(e) {
+        if (e.key === "Escape") {
+          setHowToOpen(false);
+        }
+      }
+
+      function onClickOutside() {
+        setHowToOpen(false);
+      }
+
+      document.addEventListener("keydown", onKeyDown);
+      window.addEventListener("click", onClickOutside, true);
+
+      return function () {
+        document.removeEventListener("keydown", onKeyDown);
+        window.removeEventListener("click", onClickOutside, true);
+      };
+    },
+    [howToOpen]
+  );
 
   useEffect(function () {
     let cancelled = false;
@@ -832,14 +858,13 @@ export default function HomePage() {
               gap: 16,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
               <button
                 type="button"
                 onClick={function () {
-                  const el = document.getElementById("uf-howto");
-                  if (el && typeof el.scrollIntoView === "function") {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }
+                  setHowToOpen(function (prev) {
+                    return !prev;
+                  });
                 }}
                 style={{
                   display: "inline-flex",
@@ -858,12 +883,105 @@ export default function HomePage() {
                   fontFamily: t.font,
                   whiteSpace: "nowrap",
                 }}
+                aria-haspopup="dialog"
+                aria-expanded={howToOpen ? "true" : "false"}
               >
                 <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
                   ?
                 </span>
                 {C.howToUse}
               </button>
+
+              {howToOpen ? (
+                <div
+                  role="dialog"
+                  aria-label={C.howToUseTitle}
+                  onClick={function (e) {
+                    e.stopPropagation();
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 10px)",
+                    left: 0,
+                    width: "min(520px, calc(100vw - 32px))",
+                    background: t.surface,
+                    borderRadius: 16,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.28)",
+                    overflow: "hidden",
+                    zIndex: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      borderBottom: `1px solid ${t.border}`,
+                      background: t.surfaceMuted,
+                    }}
+                  >
+                    <div style={{ fontWeight: 900, letterSpacing: "-0.01em" }}>
+                      {C.howToUseTitle}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={function () {
+                        setHowToOpen(false);
+                      }}
+                      style={{
+                        minHeight: 32,
+                        padding: "0 10px",
+                        borderRadius: 10,
+                        border: `1px solid ${t.borderStrong}`,
+                        background: t.surface,
+                        cursor: "pointer",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {C.howToUseClose}
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: 14,
+                      display: "grid",
+                      gap: 10,
+                      maxHeight: "min(70vh, 560px)",
+                      overflow: "auto",
+                    }}
+                  >
+                    {[
+                      { title: C.howToUseStep1Title, body: C.howToUseStep1Body },
+                      { title: C.howToUseStep2Title, body: C.howToUseStep2Body },
+                      { title: C.howToUseStep3Title, body: C.howToUseStep3Body },
+                      { title: C.howToUseStep4Title, body: C.howToUseStep4Body },
+                    ].map(function (step) {
+                      return (
+                        <div
+                          key={step.title}
+                          style={{
+                            border: `1px solid ${t.border}`,
+                            borderRadius: 14,
+                            padding: 12,
+                            background: t.surface,
+                          }}
+                        >
+                          <div style={{ fontWeight: 900, marginBottom: 6, fontSize: 13 }}>
+                            {step.title}
+                          </div>
+                          <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.55 }}>
+                            {step.body}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center" }}>
@@ -991,7 +1109,7 @@ export default function HomePage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)",
+                gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
                 gap: 20,
                 alignItems: "start",
               }}
@@ -1252,60 +1370,6 @@ export default function HomePage() {
                   )}
                 </div>
               </div>
-
-              <aside
-                id="uf-howto"
-                style={{
-                  ...panel,
-                  position: "sticky",
-                  top: 16,
-                  alignSelf: "start",
-                }}
-              >
-                <h2
-                  style={{
-                    margin: "0 0 6px",
-                    fontSize: 17,
-                    fontWeight: 700,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {C.howToUseTitle}
-                </h2>
-                <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted }}>
-                  {uiLocale === "tr"
-                    ? "Kurulum adımlarını takip ederek 5 dakikada aktif edebilirsin."
-                    : "Follow these steps to get set up in minutes."}
-                </p>
-
-                <div style={{ display: "grid", gap: 10 }}>
-                  {[
-                    { title: C.howToUseStep1Title, body: C.howToUseStep1Body },
-                    { title: C.howToUseStep2Title, body: C.howToUseStep2Body },
-                    { title: C.howToUseStep3Title, body: C.howToUseStep3Body },
-                    { title: C.howToUseStep4Title, body: C.howToUseStep4Body },
-                  ].map(function (step) {
-                    return (
-                      <div
-                        key={step.title}
-                        style={{
-                          border: `1px solid ${t.border}`,
-                          borderRadius: 14,
-                          padding: 12,
-                          background: t.surface,
-                        }}
-                      >
-                        <div style={{ fontWeight: 800, marginBottom: 6, fontSize: 13 }}>
-                          {step.title}
-                        </div>
-                        <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.55 }}>
-                          {step.body}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </aside>
 
               <aside
                 className="uf-aside"
