@@ -1109,7 +1109,7 @@ export default function HomePage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+                gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
                 gap: 20,
                 alignItems: "start",
               }}
@@ -1221,7 +1221,7 @@ export default function HomePage() {
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
                           gap: 10,
                         }}
                       >
@@ -1239,7 +1239,7 @@ export default function HomePage() {
                               display: "flex",
                               flexDirection: "column",
                               gap: 6,
-                              aspectRatio: "1 / 1",
+                              minHeight: 150,
                             }}
                           >
                             <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.25 }}>
@@ -1305,7 +1305,7 @@ export default function HomePage() {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
                         gap: 10,
                       }}
                     >
@@ -1323,7 +1323,7 @@ export default function HomePage() {
                             display: "flex",
                             flexDirection: "column",
                             gap: 6,
-                            aspectRatio: "1 / 1",
+                            minHeight: 150,
                           }}
                         >
                           <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.25 }}>
