@@ -1395,263 +1395,270 @@ export default function HomePage() {
                   {C.selectedHint}
                 </p>
 
-                {selectedFilters.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "20px 16px",
-                      textAlign: "center",
-                      borderRadius: t.radiusMd,
-                      border: `1px dashed ${t.borderStrong}`,
-                      color: t.textMuted,
-                      fontSize: 14,
-                      background: t.surfaceMuted,
-                    }}
-                  >
-                    {C.noneSelected}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 10,
-                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                    }}
-                  >
-                    {selectedFilters.map(function (filter) {
-                      const isDragging = draggingFilterId === filter.id;
-                      const isDragOver =
-                        dragOverFilterId === filter.id && draggingFilterId !== filter.id;
+                <div
+                  style={{
+                    maxHeight: "min(70vh, 640px)",
+                    overflowY: "auto",
+                    paddingRight: 4,
+                  }}
+                >
+                  {selectedFilters.length === 0 ? (
+                    <div
+                      style={{
+                        padding: "20px 16px",
+                        textAlign: "center",
+                        borderRadius: t.radiusMd,
+                        border: `1px dashed ${t.borderStrong}`,
+                        color: t.textMuted,
+                        fontSize: 14,
+                        background: t.surfaceMuted,
+                      }}
+                    >
+                      {C.noneSelected}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: 10,
+                        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                      }}
+                    >
+                      {selectedFilters.map(function (filter) {
+                        const isDragging = draggingFilterId === filter.id;
+                        const isDragOver =
+                          dragOverFilterId === filter.id && draggingFilterId !== filter.id;
 
-                      return (
-                        <div
-                          key={filter.id}
-                          style={{
-                            ...card,
-                            background: t.surface,
-                            boxShadow: t.shadowSm,
-                            borderColor: isDragOver
-                              ? "rgba(1, 30, 136, 0.35)"
-                              : t.border,
-                            outline: isDragOver
-                              ? "2px solid rgba(1, 30, 136, 0.18)"
-                              : "none",
-                            opacity: isDragging ? 0.65 : 1,
-                            cursor: "grab",
-                            padding: 10,
-                          }}
-                          draggable
-                          onDragStart={function (e) {
-                            setDraggingFilterId(filter.id);
-                            setDragOverFilterId(null);
-
-                            try {
-                              e.dataTransfer.effectAllowed = "move";
-                              e.dataTransfer.setData("text/plain", filter.id);
-                            } catch (error) {
-                              // ignore
-                            }
-                          }}
-                          onDragOver={function (e) {
-                            e.preventDefault();
-                            setDragOverFilterId(filter.id);
-
-                            try {
-                              e.dataTransfer.dropEffect = "move";
-                            } catch (error) {
-                              // ignore
-                            }
-                          }}
-                          onDragLeave={function () {
-                            setDragOverFilterId(function (prev) {
-                              return prev === filter.id ? null : prev;
-                            });
-                          }}
-                          onDrop={function (e) {
-                            e.preventDefault();
-
-                            let fromId = draggingFilterId;
-
-                            try {
-                              const from = e.dataTransfer.getData("text/plain");
-                              if (from) {
-                                fromId = from;
-                              }
-                            } catch (error) {
-                              // ignore
-                            }
-
-                            reorderSelectedFilters(fromId, filter.id);
-                            setDraggingFilterId(null);
-                            setDragOverFilterId(null);
-                          }}
-                          onDragEnd={function () {
-                            setDraggingFilterId(null);
-                            setDragOverFilterId(null);
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div
-                              aria-hidden="true"
-                              title="Drag"
-                              style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: 8,
-                                border: `1px solid ${t.borderStrong}`,
-                                background: t.surfaceMuted,
-                                display: "grid",
-                                placeItems: "center",
-                                color: t.textMuted,
-                                flexShrink: 0,
-                                cursor: "grab",
-                                userSelect: "none",
-                                fontSize: 12,
-                              }}
-                            >
-                              ⋮⋮
-                            </div>
-
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontWeight: 700, fontSize: 14 }}>
-                                {getFilterLabel(filter)}
-                              </div>
-                              <label
-                                style={{
-                                  marginTop: 6,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  fontSize: 12,
-                                  color: t.textMuted,
-                                  userSelect: "none",
-                                }}
-                                onClick={function (e) {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={filter.accordionOpen !== false}
-                                  onChange={function (e) {
-                                    const next = Boolean(e.target.checked);
-                                    setSelectedFilters(function (prev) {
-                                      return prev.map(function (item) {
-                                        if (item.id !== filter.id) return item;
-                                        return { ...item, accordionOpen: next };
-                                      });
-                                    });
-                                  }}
-                                />
-                                <span>{C.perFilterAccordionOpen}</span>
-                              </label>
-
-                              <label
-                                style={{
-                                  marginTop: 6,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 8,
-                                  fontSize: 12,
-                                  color: t.textMuted,
-                                  userSelect: "none",
-                                }}
-                                onClick={function (e) {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={filter.optionsSearchEnabled !== false}
-                                  onChange={function (e) {
-                                    const next = Boolean(e.target.checked);
-                                    setSelectedFilters(function (prev) {
-                                      return prev.map(function (item) {
-                                        if (item.id !== filter.id) return item;
-                                        return { ...item, optionsSearchEnabled: next };
-                                      });
-                                    });
-                                  }}
-                                />
-                                <span>{C.perFilterOptionsSearch}</span>
-                              </label>
-                            </div>
-
-                            <div className="uf-reorder-buttons" style={{ gap: 6, flexShrink: 0 }}>
-                              <button
-                                type="button"
-                                onClick={function (e) {
-                                  e.stopPropagation();
-                                  moveSelectedFilterBy(filter.id, -1);
-                                }}
-                                title={C.moveUp}
-                                aria-label={C.moveUp}
-                                style={{
-                                  width: 30,
-                                  height: 30,
-                                  borderRadius: 9,
-                                  border: `1px solid ${t.borderStrong}`,
-                                  background: t.surface,
-                                  color: t.text,
-                                  cursor: "pointer",
-                                  fontWeight: 700,
-                                  lineHeight: 1,
-                                }}
-                              >
-                                ↑
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={function (e) {
-                                  e.stopPropagation();
-                                  moveSelectedFilterBy(filter.id, 1);
-                                }}
-                                title={C.moveDown}
-                                aria-label={C.moveDown}
-                                style={{
-                                  width: 30,
-                                  height: 30,
-                                  borderRadius: 9,
-                                  border: `1px solid ${t.borderStrong}`,
-                                  background: t.surface,
-                                  color: t.text,
-                                  cursor: "pointer",
-                                  fontWeight: 700,
-                                  lineHeight: 1,
-                                }}
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          </div>
-
-                          <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
-                            {filter.namespace ? (
-                              <>
-                                <span style={{ fontFamily: "ui-monospace, monospace" }}>
-                                  {filter.namespace}
-                                </span>
-                                <span> · </span>
-                              </>
-                            ) : null}
-                            {formatFilterFieldKey(filter.key)} · {C.typeLabel}:{" "}
-                            {formatType(filter.type)}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={function () {
-                              removeFilter(filter.id);
+                        return (
+                          <div
+                            key={filter.id}
+                            style={{
+                              ...card,
+                              background: t.surface,
+                              boxShadow: t.shadowSm,
+                              borderColor: isDragOver
+                                ? "rgba(1, 30, 136, 0.35)"
+                                : t.border,
+                              outline: isDragOver
+                                ? "2px solid rgba(1, 30, 136, 0.18)"
+                                : "none",
+                              opacity: isDragging ? 0.65 : 1,
+                              cursor: "grab",
+                              padding: 10,
                             }}
-                            style={btnGhost}
+                            draggable
+                            onDragStart={function (e) {
+                              setDraggingFilterId(filter.id);
+                              setDragOverFilterId(null);
+
+                              try {
+                                e.dataTransfer.effectAllowed = "move";
+                                e.dataTransfer.setData("text/plain", filter.id);
+                              } catch (error) {
+                                // ignore
+                              }
+                            }}
+                            onDragOver={function (e) {
+                              e.preventDefault();
+                              setDragOverFilterId(filter.id);
+
+                              try {
+                                e.dataTransfer.dropEffect = "move";
+                              } catch (error) {
+                                // ignore
+                              }
+                            }}
+                            onDragLeave={function () {
+                              setDragOverFilterId(function (prev) {
+                                return prev === filter.id ? null : prev;
+                              });
+                            }}
+                            onDrop={function (e) {
+                              e.preventDefault();
+
+                              let fromId = draggingFilterId;
+
+                              try {
+                                const from = e.dataTransfer.getData("text/plain");
+                                if (from) {
+                                  fromId = from;
+                                }
+                              } catch (error) {
+                                // ignore
+                              }
+
+                              reorderSelectedFilters(fromId, filter.id);
+                              setDraggingFilterId(null);
+                              setDragOverFilterId(null);
+                            }}
+                            onDragEnd={function () {
+                              setDraggingFilterId(null);
+                              setDragOverFilterId(null);
+                            }}
                           >
-                            {C.remove}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div
+                                aria-hidden="true"
+                                title="Drag"
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 8,
+                                  border: `1px solid ${t.borderStrong}`,
+                                  background: t.surfaceMuted,
+                                  display: "grid",
+                                  placeItems: "center",
+                                  color: t.textMuted,
+                                  flexShrink: 0,
+                                  cursor: "grab",
+                                  userSelect: "none",
+                                  fontSize: 12,
+                                }}
+                              >
+                                ⋮⋮
+                              </div>
+
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                                  {getFilterLabel(filter)}
+                                </div>
+                                <label
+                                  style={{
+                                    marginTop: 6,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    fontSize: 12,
+                                    color: t.textMuted,
+                                    userSelect: "none",
+                                  }}
+                                  onClick={function (e) {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={filter.accordionOpen !== false}
+                                    onChange={function (e) {
+                                      const next = Boolean(e.target.checked);
+                                      setSelectedFilters(function (prev) {
+                                        return prev.map(function (item) {
+                                          if (item.id !== filter.id) return item;
+                                          return { ...item, accordionOpen: next };
+                                        });
+                                      });
+                                    }}
+                                  />
+                                  <span>{C.perFilterAccordionOpen}</span>
+                                </label>
+
+                                <label
+                                  style={{
+                                    marginTop: 6,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    fontSize: 12,
+                                    color: t.textMuted,
+                                    userSelect: "none",
+                                  }}
+                                  onClick={function (e) {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={filter.optionsSearchEnabled !== false}
+                                    onChange={function (e) {
+                                      const next = Boolean(e.target.checked);
+                                      setSelectedFilters(function (prev) {
+                                        return prev.map(function (item) {
+                                          if (item.id !== filter.id) return item;
+                                          return { ...item, optionsSearchEnabled: next };
+                                        });
+                                      });
+                                    }}
+                                  />
+                                  <span>{C.perFilterOptionsSearch}</span>
+                                </label>
+                              </div>
+
+                              <div className="uf-reorder-buttons" style={{ gap: 6, flexShrink: 0 }}>
+                                <button
+                                  type="button"
+                                  onClick={function (e) {
+                                    e.stopPropagation();
+                                    moveSelectedFilterBy(filter.id, -1);
+                                  }}
+                                  title={C.moveUp}
+                                  aria-label={C.moveUp}
+                                  style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 9,
+                                    border: `1px solid ${t.borderStrong}`,
+                                    background: t.surface,
+                                    color: t.text,
+                                    cursor: "pointer",
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  ↑
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={function (e) {
+                                    e.stopPropagation();
+                                    moveSelectedFilterBy(filter.id, 1);
+                                  }}
+                                  title={C.moveDown}
+                                  aria-label={C.moveDown}
+                                  style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 9,
+                                    border: `1px solid ${t.borderStrong}`,
+                                    background: t.surface,
+                                    color: t.text,
+                                    cursor: "pointer",
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                            </div>
+
+                            <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
+                              {filter.namespace ? (
+                                <>
+                                  <span style={{ fontFamily: "ui-monospace, monospace" }}>
+                                    {filter.namespace}
+                                  </span>
+                                  <span> · </span>
+                                </>
+                              ) : null}
+                              {formatFilterFieldKey(filter.key)} · {C.typeLabel}:{" "}
+                              {formatType(filter.type)}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={function () {
+                                removeFilter(filter.id);
+                              }}
+                              style={btnGhost}
+                            >
+                              {C.remove}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                 <div
                   style={{
@@ -1757,6 +1764,7 @@ export default function HomePage() {
                     {saveMessage}
                   </div>
                 ) : null}
+                </div>
               </aside>
             </div>
           ) : null}
