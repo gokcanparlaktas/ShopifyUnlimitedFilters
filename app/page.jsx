@@ -9,7 +9,6 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const shop = "filter-test-74b5ly2r.myshopify.com";
   useEffect(function () {
     async function initPage() {
       try {
