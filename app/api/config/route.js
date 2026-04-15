@@ -3,6 +3,14 @@ import { adminGraphQL } from "../../../lib/shopify-admin";
 const NAMESPACE = "unlimited_filters";
 const KEY = "config";
 
+function buildCorsHeaders(origin) {
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
+
 function getDefaultConfig() {
   return {
     enabled: true,
@@ -36,7 +44,16 @@ async function getShopId(shop) {
   };
 }
 
+export async function OPTIONS(request) {
+  const origin = request.headers.get("origin");
+  return new Response(null, {
+    status: 204,
+    headers: buildCorsHeaders(origin),
+  });
+}
+
 export async function GET(request) {
+  const origin = request.headers.get("origin");
   const { searchParams } = new URL(request.url);
   const shop = searchParams.get("shop");
 
@@ -46,7 +63,10 @@ export async function GET(request) {
         ok: false,
         error: "shop parametresi gerekli",
       },
-      { status: 400 }
+      {
+        status: 400,
+        headers: buildCorsHeaders(origin),
+      }
     );
   }
 
@@ -54,28 +74,42 @@ export async function GET(request) {
     const { existingConfigValue } = await getShopId(shop);
 
     if (!existingConfigValue) {
-      return Response.json({
-        ok: true,
-        config: getDefaultConfig(),
-      });
+      return Response.json(
+        {
+          ok: true,
+          config: getDefaultConfig(),
+        },
+        {
+          headers: buildCorsHeaders(origin),
+        }
+      );
     }
 
-    return Response.json({
-      ok: true,
-      config: JSON.parse(existingConfigValue),
-    });
+    return Response.json(
+      {
+        ok: true,
+        config: JSON.parse(existingConfigValue),
+      },
+      {
+        headers: buildCorsHeaders(origin),
+      }
+    );
   } catch (error) {
     return Response.json(
       {
         ok: false,
         error: error.message,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: buildCorsHeaders(origin),
+      }
     );
   }
 }
 
 export async function POST(request) {
+  const origin = request.headers.get("origin");
   const { searchParams } = new URL(request.url);
   const shop = searchParams.get("shop");
 
@@ -85,7 +119,10 @@ export async function POST(request) {
         ok: false,
         error: "shop parametresi gerekli",
       },
-      { status: 400 }
+      {
+        status: 400,
+        headers: buildCorsHeaders(origin),
+      }
     );
   }
 
@@ -145,17 +182,25 @@ export async function POST(request) {
       throw new Error(userErrors[0].message || "Config kaydedilemedi");
     }
 
-    return Response.json({
-      ok: true,
-      config,
-    });
+    return Response.json(
+      {
+        ok: true,
+        config,
+      },
+      {
+        headers: buildCorsHeaders(origin),
+      }
+    );
   } catch (error) {
     return Response.json(
       {
         ok: false,
         error: error.message,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: buildCorsHeaders(origin),
+      }
     );
   }
 }
