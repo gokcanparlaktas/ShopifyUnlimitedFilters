@@ -46,6 +46,22 @@ const STRINGS = {
     showSearch: "Show search",
     accordionOpen: "Open filter accordions by default",
     perFilterAccordionOpen: "Accordion open",
+    perFilterOptionsSearch: "Option search",
+    howToUse: "How to use",
+    howToUseTitle: "How to use Unlimited Filters",
+    howToUseClose: "Close",
+    howToUseStep1Title: "1) Install Headless and get Storefront token",
+    howToUseStep1Body:
+      "In Shopify Admin, install the Headless sales channel and create a Storefront API access token. Paste this token into the theme block setting and Save configuration in the app.",
+    howToUseStep2Title: "2) Enable metafields (if you use them)",
+    howToUseStep2Body:
+      "If your filters read product metafields, make sure those metafields are available in the Storefront API access scope and are populated on products.",
+    howToUseStep3Title: "3) Add the theme block to your collection template",
+    howToUseStep3Body:
+      "Go to Online Store → Themes → Customize → Collection template. Under Apps, add the “Unlimited Filters” block and position it where you want it to appear.",
+    howToUseStep4Title: "4) Hide the theme’s native product grid",
+    howToUseStep4Body:
+      "In the block settings, enable “Hide theme product grid” so the theme grid doesn’t show under the custom grid.",
   },
   tr: {
     brandTitle: "Unlimited Filters",
@@ -87,6 +103,22 @@ const STRINGS = {
     showSearch: "Aramayı göster",
     accordionOpen: "Filtre accordion'ları varsayılan olarak açık olsun",
     perFilterAccordionOpen: "Bu filtre açık başlasın",
+    perFilterOptionsSearch: "Seçenek araması",
+    howToUse: "Nasıl kullanılır?",
+    howToUseTitle: "Unlimited Filters nasıl kullanılır?",
+    howToUseClose: "Kapat",
+    howToUseStep1Title: "1) Headless’ı kur ve Storefront token al",
+    howToUseStep1Body:
+      "Shopify Admin’de Headless sales channel’ı kurup Storefront API access token oluştur. Bu token’ı tema block ayarına gir ve uygulamada Kaydet.",
+    howToUseStep2Title: "2) Metafield’ları aç (kullanacaksan)",
+    howToUseStep2Body:
+      "Filtrelerin ürün metafield’larını okuyacaksa, ilgili metafield’ların Storefront API erişim kapsamına dahil olduğundan ve ürünlerde dolu olduğundan emin ol.",
+    howToUseStep3Title: "3) Collection şablonuna block’u ekle",
+    howToUseStep3Body:
+      "Online Store → Themes → Customize → Collection template. Uygulamalar altında “Unlimited Filters” block’unu ekle ve istediğin sıraya koy.",
+    howToUseStep4Title: "4) Temanın ürün ızgarasını gizle",
+    howToUseStep4Body:
+      "Block ayarlarından “Hide theme product grid” seçeneğini aç; böylece tema grid’i custom grid’in altında görünmez.",
   },
 };
 
@@ -216,6 +248,7 @@ export default function HomePage() {
   const [showSorting, setShowSorting] = useState(true);
   const [showSearch, setShowSearch] = useState(true);
   const [filterAccordionDefaultOpen, setFilterAccordionDefaultOpen] = useState(true);
+  const [howToOpen, setHowToOpen] = useState(false);
 
   useEffect(function () {
     const locale = detectUiLang();
@@ -282,9 +315,22 @@ export default function HomePage() {
         setSelectedFilters(
           filters.map(function (f) {
             if (typeof f?.accordionOpen === "boolean") {
-              return f;
+              return {
+                ...f,
+                optionsSearchEnabled:
+                  typeof f?.optionsSearchEnabled === "boolean"
+                    ? f.optionsSearchEnabled
+                    : true,
+              };
             }
-            return { ...f, accordionOpen: defaultAccordionOpen };
+            return {
+              ...f,
+              accordionOpen: defaultAccordionOpen,
+              optionsSearchEnabled:
+                typeof f?.optionsSearchEnabled === "boolean"
+                  ? f.optionsSearchEnabled
+                  : true,
+            };
           })
         );
         setShowSorting(config.showSorting !== false);
@@ -469,6 +515,7 @@ export default function HomePage() {
         ...filter,
         sortOrder: prev.length + 1,
         accordionOpen: filterAccordionDefaultOpen,
+        optionsSearchEnabled: true,
       });
     });
   }
@@ -1194,6 +1241,26 @@ export default function HomePage() {
                   {C.selectedHint}
                 </p>
 
+                <button
+                  type="button"
+                  onClick={function () {
+                    setHowToOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    minHeight: 40,
+                    borderRadius: t.radiusMd,
+                    border: `1px solid ${t.borderStrong}`,
+                    background: t.surfaceMuted,
+                    color: t.text,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    marginBottom: 12,
+                  }}
+                >
+                  {C.howToUse}
+                </button>
+
                 {selectedFilters.length === 0 ? (
                   <div
                     style={{
@@ -1209,7 +1276,13 @@ export default function HomePage() {
                     {C.noneSelected}
                   </div>
                 ) : (
-                  <div style={{ display: "grid", gap: 10 }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 10,
+                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    }}
+                  >
                     {selectedFilters.map(function (filter) {
                       const isDragging = draggingFilterId === filter.id;
                       const isDragOver =
@@ -1230,6 +1303,7 @@ export default function HomePage() {
                               : "none",
                             opacity: isDragging ? 0.65 : 1,
                             cursor: "grab",
+                            padding: 10,
                           }}
                           draggable
                           onDragStart={function (e) {
@@ -1286,8 +1360,8 @@ export default function HomePage() {
                               aria-hidden="true"
                               title="Drag"
                               style={{
-                                width: 26,
-                                height: 26,
+                                width: 22,
+                                height: 22,
                                 borderRadius: 8,
                                 border: `1px solid ${t.borderStrong}`,
                                 background: t.surfaceMuted,
@@ -1297,6 +1371,7 @@ export default function HomePage() {
                                 flexShrink: 0,
                                 cursor: "grab",
                                 userSelect: "none",
+                                fontSize: 12,
                               }}
                             >
                               ⋮⋮
@@ -1334,6 +1409,36 @@ export default function HomePage() {
                                   }}
                                 />
                                 <span>{C.perFilterAccordionOpen}</span>
+                              </label>
+
+                              <label
+                                style={{
+                                  marginTop: 6,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  fontSize: 12,
+                                  color: t.textMuted,
+                                  userSelect: "none",
+                                }}
+                                onClick={function (e) {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={filter.optionsSearchEnabled !== false}
+                                  onChange={function (e) {
+                                    const next = Boolean(e.target.checked);
+                                    setSelectedFilters(function (prev) {
+                                      return prev.map(function (item) {
+                                        if (item.id !== filter.id) return item;
+                                        return { ...item, optionsSearchEnabled: next };
+                                      });
+                                    });
+                                  }}
+                                />
+                                <span>{C.perFilterOptionsSearch}</span>
                               </label>
                             </div>
 
@@ -1523,6 +1628,100 @@ export default function HomePage() {
           ) : null}
         </div>
       </main>
+
+      {howToOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={function () {
+            setHowToOpen(false);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={function (e) {
+              e.stopPropagation();
+            }}
+            style={{
+              width: "min(720px, 100%)",
+              background: t.surface,
+              borderRadius: 16,
+              border: `1px solid ${t.borderStrong}`,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                borderBottom: `1px solid ${t.border}`,
+                background: t.surfaceMuted,
+              }}
+            >
+              <div style={{ fontWeight: 800, letterSpacing: "-0.01em" }}>
+                {C.howToUseTitle}
+              </div>
+              <button
+                type="button"
+                onClick={function () {
+                  setHowToOpen(false);
+                }}
+                style={{
+                  minHeight: 34,
+                  padding: "0 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.borderStrong}`,
+                  background: t.surface,
+                  cursor: "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                {C.howToUseClose}
+              </button>
+            </div>
+
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              {[
+                { title: C.howToUseStep1Title, body: C.howToUseStep1Body },
+                { title: C.howToUseStep2Title, body: C.howToUseStep2Body },
+                { title: C.howToUseStep3Title, body: C.howToUseStep3Body },
+                { title: C.howToUseStep4Title, body: C.howToUseStep4Body },
+              ].map(function (step) {
+                return (
+                  <div
+                    key={step.title}
+                    style={{
+                      border: `1px solid ${t.border}`,
+                      borderRadius: 14,
+                      padding: 14,
+                      background: t.surface,
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                      {step.title}
+                    </div>
+                    <div style={{ fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
+                      {step.body}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -572,6 +572,16 @@
         }
         return FILTER_CONFIG.filterAccordionDefaultOpen !== false;
       }
+
+      function getGroupOptionsSearchEnabled(groupKey) {
+        const def = (FILTER_CONFIG.filters || []).find(function (item) {
+          return item && item.key === groupKey;
+        });
+        if (def && typeof def.optionsSearchEnabled === 'boolean') {
+          return def.optionsSearchEnabled;
+        }
+        return true;
+      }
   
       container.innerHTML = facetGroups.map(function (group, index) {
         let optionsHtml = '';
@@ -593,10 +603,13 @@
           const shouldScroll = entries.length > 7;
           const listClass = shouldScroll ? 'adv-filter-options adv-filter-options--scroll' : 'adv-filter-options';
 
-          const searchHtml =
-            '<div class="adv-filter-options-search">' +
-              '<input class="adv-filter-options-search__input" type="search" data-adv-filter-options-search="' + group.key + '" placeholder="Ara...">' +
-            '</div>';
+          const searchHtml = getGroupOptionsSearchEnabled(group.key)
+            ? (
+              '<div class="adv-filter-options-search">' +
+                '<input class="adv-filter-options-search__input" type="search" data-adv-filter-options-search="' + group.key + '" placeholder="Ara...">' +
+              '</div>'
+            )
+            : '';
 
           const listHtml = entries.map(function (entry, optionIndex) {
             const value = entry[0];
