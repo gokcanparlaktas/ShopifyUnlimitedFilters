@@ -38,9 +38,12 @@ export default function HomePage() {
   
         setDefinitions(Array.isArray(definitionsJson.definitions) ? definitionsJson.definitions : []);
   
-        const configResponse = await fetch("/api/config", {
-          cache: "no-store",
-        });
+        const configResponse = await fetch(
+            `/api/config?shop=${encodeURIComponent(shop)}`,
+            {
+              cache: "no-store",
+            }
+          );
   
         const configJson = await configResponse.json();
   
@@ -111,22 +114,25 @@ export default function HomePage() {
       setSaving(true);
       setSaveMessage("");
   
-      const response = await fetch("/api/config", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          enabled: true,
-          showSorting: true,
-          grid: {
-            mobile: 2,
-            tablet: 3,
-            desktop: 4,
+      const response = await fetch(
+        `/api/config?shop=${encodeURIComponent(shop)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          filters: selectedFilters,
-        }),
-      });
+          body: JSON.stringify({
+            enabled: true,
+            showSorting: true,
+            grid: {
+              mobile: 2,
+              tablet: 3,
+              desktop: 4,
+            },
+            filters: selectedFilters,
+          }),
+        }
+      );
   
       const json = await response.json();
   

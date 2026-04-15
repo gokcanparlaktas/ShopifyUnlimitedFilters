@@ -1,15 +1,7 @@
-import fs from "fs";
-import path from "path";
+import { adminGraphQL } from "../../../lib/shopify-admin";
 
-const CONFIG_PATH = path.join(process.cwd(), "data", "config.json");
-
-function ensureDataDir() {
-  const dir = path.dirname(CONFIG_PATH);
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
+const NAMESPACE = "unlimited_filters";
+const KEY = "config";
 
 function getDefaultConfig() {
   return {
@@ -24,23 +16,53 @@ function getDefaultConfig() {
   };
 }
 
-export async function GET() {
-  try {
-    ensureDataDir();
+async function getShopId(shop) {
+  const query = `
+    query GetShopId {
+      shop {
+        id
+        metafield(namespace: "${NAMESPACE}", key: "${KEY}") {
+          value
+        }
+      }
+    }
+  `;
 
-    if (!fs.existsSync(CONFIG_PATH)) {
+  const data = await adminGraphQL(shop, query);
+
+  return {
+    shopId: data?.shop?.id || "",
+    existingConfigValue: data?.shop?.metafield?.value || "",
+  };
+}
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const shop = searchParams.get("shop");
+
+  if (!shop) {
+    return Response.json(
+      {
+        ok: false,
+        error: "shop parametresi gerekli",
+      },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { existingConfigValue } = await getShopId(shop);
+
+    if (!existingConfigValue) {
       return Response.json({
         ok: true,
         config: getDefaultConfig(),
       });
     }
 
-    const raw = fs.readFileSync(CONFIG_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-
     return Response.json({
       ok: true,
-      config: parsed,
+      config: JSON.parse(existingConfigValue),
     });
   } catch (error) {
     return Response.json(
@@ -54,9 +76,20 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  try {
-    ensureDataDir();
+  const { searchParams } = new URL(request.url);
+  const shop = searchParams.get("shop");
 
+  if (!shop) {
+    return Response.json(
+      {
+        ok: false,
+        error: "shop parametresi gerekli",
+      },
+      { status: 400 }
+    );
+  }
+
+  try {
     const body = await request.json();
 
     const config = {
@@ -70,7 +103,47 @@ export async function POST(request) {
       filters: Array.isArray(body.filters) ? body.filters : [],
     };
 
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
+    const { shopId } = await getShopId(shop);
+
+    if (!shopId) {
+      throw new Error("shop.id alınamadı");
+    }
+
+    const query = `
+      mutation SaveShopConfig($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          metafields {
+            id
+            namespace
+            key
+            value
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      metafields: [
+        {
+          ownerId: shopId,
+          namespace: NAMESPACE,
+          key: KEY,
+          type: "json",
+          value: JSON.stringify(config),
+        },
+      ],
+    };
+
+    const data = await adminGraphQL(shop, query, variables);
+    const userErrors = data?.metafieldsSet?.userErrors || [];
+
+    if (userErrors.length > 0) {
+      throw new Error(userErrors[0].message || "Config kaydedilemedi");
+    }
 
     return Response.json({
       ok: true,
