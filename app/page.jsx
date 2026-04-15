@@ -2,18 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { STANDARD_FILTER_LIBRARY } from "../lib/standard-filters";
+import { authenticatedFetch } from "../lib/authenticated-fetch";
+import { getShopFromUrl } from "../lib/shopify-app-bridge";
 
 const STRINGS = {
   en: {
     brandTitle: "Unlimited Filters",
     slogan: "Go beyond limits—filter your way.",
     loading: "Loading…",
-    shopMissing:
-      "Store link not found. Open the app from Shopify Admin or add ?shop=your-store.myshopify.com to the URL.",
+    shopMissing: "Store context could not be detected. Open the app from Shopify Admin.",
+    embeddedRequired:
+      "This app must be opened inside Shopify Admin so a valid session token can be created.",
     genericError: "Something went wrong.",
     definitionsFailed: "Could not load metafield definitions.",
+    configLoadFailed: "Could not load saved configuration.",
     configSaveFailed: "Could not save configuration.",
     saveSuccess: "Configuration saved.",
+    unauthorized:
+      "Authentication failed. Reopen the app from Shopify Admin and try again.",
     tabStandard: "Standard filters",
     tabCustom: "Custom metafields",
     searchLabel: "Search",
@@ -32,17 +38,23 @@ const STRINGS = {
     saving: "Saving…",
     save: "Save configuration",
     backToShop: "Back to Shopify",
+    moveUp: "Move up",
+    moveDown: "Move down",
   },
   tr: {
     brandTitle: "Unlimited Filters",
     slogan: "Sınırları aşın, istediğiniz gibi filtreleyin.",
     loading: "Yükleniyor…",
-    shopMissing:
-      "Mağaza linkiniz bulunamadı. Uygulamayı Shopify Admin üzerinden açın veya URL’ye ?shop=magazanız.myshopify.com ekleyin.",
+    shopMissing: "Mağaza bağlamı algılanamadı. Uygulamayı Shopify Admin içinden açın.",
+    embeddedRequired:
+      "Bu uygulama geçerli session token üretebilmek için Shopify Admin içinde açılmalıdır.",
     genericError: "Bir hata oluştu.",
     definitionsFailed: "Metafield tanımları alınamadı.",
+    configLoadFailed: "Kayıtlı yapılandırma alınamadı.",
     configSaveFailed: "Yapılandırma kaydedilemedi.",
     saveSuccess: "Yapılandırma kaydedildi.",
+    unauthorized:
+      "Kimlik doğrulama başarısız oldu. Uygulamayı Shopify Admin içinden yeniden açıp tekrar deneyin.",
     tabStandard: "Standart filtreler",
     tabCustom: "Özel metafieldlar",
     searchLabel: "Ara",
@@ -61,6 +73,8 @@ const STRINGS = {
     saving: "Kaydediliyor…",
     save: "Yapılandırmayı kaydet",
     backToShop: "Mağazaya dön",
+    moveUp: "Yukarı al",
+    moveDown: "Aşağı al",
   },
 };
 
@@ -68,17 +82,69 @@ function detectUiLang() {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
     return "en";
   }
+
   const list =
     navigator.languages && navigator.languages.length > 0
       ? navigator.languages
       : [navigator.language];
+
   for (let i = 0; i < list.length; i++) {
     const code = String(list[i] || "").toLowerCase();
     if (code.startsWith("tr")) {
       return "tr";
     }
   }
+
   return "en";
+}
+
+async function readJsonSafely(response, fallbackMessage) {
+  const text = await response.text();
+
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch (error) {
+    throw new Error(text || fallbackMessage);
+  }
+
+  if (!response.ok) {
+    throw new Error(json?.error || fallbackMessage);
+  }
+
+  return json;
+}
+
+function normalizeErrorMessage(error, locale) {
+  const L = STRINGS[locale] || STRINGS.en;
+  const message = String(error?.message || "").trim();
+
+  if (!message) {
+    return L.genericError;
+  }
+
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("session token") ||
+    lower.includes("authorization") ||
+    lower.includes("unauthorized") ||
+    lower.includes("401") ||
+    lower.includes("forbidden") ||
+    lower.includes("403")
+  ) {
+    return L.unauthorized;
+  }
+
+  if (
+    lower.includes("host parametresi") ||
+    lower.includes("shopify admin") ||
+    lower.includes("embedded")
+  ) {
+    return L.embeddedRequired;
+  }
+
+  return message;
 }
 
 const t = {
@@ -101,6 +167,27 @@ const t = {
   font: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 };
 
+const FILTER_FIELD_KEY_LABELS = {
+  vendor: { en: "Vendor", tr: "Satıcı / Marka" },
+  availableForSale: { en: "Availability", tr: "Stok Durumu" },
+  available_for_sale: { en: "Availability", tr: "Stok Durumu" },
+  price: { en: "Price", tr: "Fiyat" },
+  compareAtPrice: { en: "Compare-at Price", tr: "Karşılaştırma Fiyatı" },
+  tags: { en: "Tags", tr: "Etiketler" },
+  option1: { en: "Variant Option 1", tr: "Varyant Seçeneği 1" },
+  option2: { en: "Variant Option 2", tr: "Varyant Seçeneği 2" },
+  option3: { en: "Variant Option 3", tr: "Varyant Seçeneği 3" },
+  productType: { en: "Product Type", tr: "Ürün Türü" },
+  product_type: { en: "Product Type", tr: "Ürün Türü" },
+  title: { en: "Title", tr: "Başlık" },
+  handle: { en: "Handle", tr: "URL Deseni" },
+  sku: { en: "SKU", tr: "Stok Kodu" },
+  barcode: { en: "Barcode", tr: "Barkod" },
+  createdAt: { en: "Created At", tr: "Oluşturulma" },
+  updatedAt: { en: "Updated At", tr: "Güncellenme" },
+  publishedAt: { en: "Published At", tr: "Yayınlanma" },
+};
+
 export default function HomePage() {
   const [definitions, setDefinitions] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -112,95 +199,107 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState("standard");
   const [filterSearch, setFilterSearch] = useState("");
   const [uiLocale, setUiLocale] = useState("en");
+  const [draggingFilterId, setDraggingFilterId] = useState(null);
+  const [dragOverFilterId, setDragOverFilterId] = useState(null);
+
+  useEffect(function () {
+    const locale = detectUiLang();
+    setUiLocale(locale);
+
+    try {
+      const shopParam = getShopFromUrl().trim();
+      setShop(shopParam);
+    } catch (error) {
+      setShop("");
+    }
+  }, []);
 
   useEffect(function () {
     document.documentElement.lang = uiLocale === "tr" ? "tr" : "en";
   }, [uiLocale]);
 
   useEffect(function () {
-    const lang = detectUiLang();
-    setUiLocale(lang);
+    let cancelled = false;
 
     async function initPage() {
-      const params = new URLSearchParams(window.location.search);
-      const fromQuery = (params.get("shop") || "").trim();
-      const fromEnv = (process.env.NEXT_PUBLIC_SHOPIFY_SHOP || "").trim();
-      const shopDomain = fromQuery || fromEnv;
-      const L = STRINGS[lang];
-
-      setShop(shopDomain);
-
-      if (!shopDomain) {
-        setLoading(false);
-        setError(L.shopMissing);
-        return;
-      }
+      const L = STRINGS[uiLocale] || STRINGS.en;
 
       try {
         setLoading(true);
         setError("");
+        setSaveMessage("");
 
-        const definitionsResponse = await fetch(
-          `/api/metafield-definitions?shop=${encodeURIComponent(shopDomain)}`,
-          {
-            cache: "no-store",
-          }
+        const definitionsResponse = await authenticatedFetch("/api/metafield-definitions", {
+          cache: "no-store",
+        });
+
+        const definitionsJson = await readJsonSafely(
+          definitionsResponse,
+          L.definitionsFailed
         );
-
-        const definitionsText = await definitionsResponse.text();
-
-        let definitionsJson;
-        try {
-          definitionsJson = JSON.parse(definitionsText);
-        } catch (parseError) {
-          throw new Error(definitionsText);
-        }
 
         if (!definitionsJson.ok) {
           throw new Error(definitionsJson.error || L.definitionsFailed);
         }
 
-        setDefinitions(Array.isArray(definitionsJson.definitions) ? definitionsJson.definitions : []);
+        const configResponse = await authenticatedFetch("/api/config", {
+          cache: "no-store",
+        });
 
-        const configResponse = await fetch(
-          `/api/config?shop=${encodeURIComponent(shopDomain)}`,
-          {
-            cache: "no-store",
-          }
+        const configJson = await readJsonSafely(configResponse, L.configLoadFailed);
+
+        if (!configJson.ok) {
+          throw new Error(configJson.error || L.configLoadFailed);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setDefinitions(
+          Array.isArray(definitionsJson.definitions) ? definitionsJson.definitions : []
         );
 
-        const configJson = await configResponse.json();
+        const filters = Array.isArray(configJson.config?.filters)
+          ? configJson.config.filters
+          : [];
 
-        if (configJson.ok) {
-          const filters = Array.isArray(configJson.config?.filters)
-            ? configJson.config.filters
-            : [];
-          setSelectedFilters(filters);
-        }
+        setSelectedFilters(filters);
       } catch (err) {
-        setError(err.message || L.genericError);
+        if (cancelled) {
+          return;
+        }
+        setError(normalizeErrorMessage(err, uiLocale));
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     initPage();
-  }, []);
+
+    return function () {
+      cancelled = true;
+    };
+  }, [uiLocale]);
 
   function goBackToShopify() {
     if (!shop) {
       return;
     }
+
     const target = `https://${shop}/admin`;
+
     try {
-      // Embedded apps often run in an iframe; try to break out.
       if (window.top && window.top !== window) {
         window.top.location.href = target;
         return;
       }
-    } catch (e) {
+    } catch (error) {
       // ignore and fall back
     }
+
     window.location.href = target;
   }
 
@@ -209,7 +308,7 @@ export default function HomePage() {
     if (!raw) {
       return "";
     }
-    // Prefer the subdomain as the "shop name" for *.myshopify.com
+
     const base = raw.endsWith(".myshopify.com")
       ? raw.slice(0, -".myshopify.com".length)
       : raw.split(".")[0];
@@ -246,7 +345,7 @@ export default function HomePage() {
       return filter.labels.tr;
     }
 
-    return filter.labelKey || filter.key;
+    return filter.labelKey || filter.label || filter.key;
   }
 
   function formatType(rawType) {
@@ -255,9 +354,6 @@ export default function HomePage() {
       return "";
     }
 
-    // Examples we want to normalize:
-    // - "single_line_text_field (TEXT)" -> "single_line_text_field"
-    // - "list.single_line_text_field" -> "list.single_line_text_field"
     const base = input.split("(")[0].trim().toLowerCase();
 
     const map = {
@@ -278,6 +374,8 @@ export default function HomePage() {
       money: { en: "Money", tr: "Para" },
       url: { en: "URL", tr: "Bağlantı" },
       json: { en: "JSON", tr: "JSON" },
+      price: { en: "Price", tr: "Fiyat" },
+      range: { en: "Range", tr: "Aralık" },
     };
 
     const pick = function (token) {
@@ -285,59 +383,41 @@ export default function HomePage() {
       if (map[clean]) {
         return map[clean][uiLocale] || map[clean].en;
       }
-      // Fallback: make it readable without changing underlying value
       const readable = clean.replace(/_/g, " ").replace(/\./g, " · ").trim();
       return readable ? readable.charAt(0).toUpperCase() + readable.slice(1) : "";
     };
 
-    // Handle list.<type> by keeping "list" label and translating the inner type
     if (base.startsWith("list.")) {
       const inner = base.slice("list.".length);
       const listLabel = uiLocale === "tr" ? "liste" : "list";
-      const listTitle = listLabel ? listLabel.charAt(0).toUpperCase() + listLabel.slice(1) : "";
+      const listTitle = listLabel
+        ? listLabel.charAt(0).toUpperCase() + listLabel.slice(1)
+        : "";
       return `${listTitle} · ${pick(inner)}`;
     }
 
     return pick(base);
   }
 
-  const FILTER_FIELD_KEY_LABELS = {
-    vendor: { en: "Vendor", tr: "Satıcı / Marka" },
-    availableForSale: { en: "Availability", tr: "Stok Durumu" },
-    available_for_sale: { en: "Availability", tr: "Stok Durumu" },
-    price: { en: "Price", tr: "Fiyat" },
-    compareAtPrice: { en: "Compare-at Price", tr: "Karşılaştırma Fiyatı" },
-    tags: { en: "Tags", tr: "Etiketler" },
-    option1: { en: "Variant Option 1", tr: "Varyant Seçeneği 1" },
-    option2: { en: "Variant Option 2", tr: "Varyant Seçeneği 2" },
-    option3: { en: "Variant Option 3", tr: "Varyant Seçeneği 3" },
-    productType: { en: "Product Type", tr: "Ürün Türü" },
-    product_type: { en: "Product Type", tr: "Ürün Türü" },
-    title: { en: "Title", tr: "Başlık" },
-    handle: { en: "Handle", tr: "URL Deseni" },
-    sku: { en: "SKU", tr: "Stok Kodu" },
-    barcode: { en: "Barcode", tr: "Barkod" },
-    createdAt: { en: "Created At", tr: "Oluşturulma" },
-    updatedAt: { en: "Updated At", tr: "Güncellenme" },
-    publishedAt: { en: "Published At", tr: "Yayınlanma" },
-  };
-
   function formatFilterFieldKey(key) {
     const k = String(key || "").trim();
     if (!k) {
       return "";
     }
+
     if (FILTER_FIELD_KEY_LABELS[k]) {
       return FILTER_FIELD_KEY_LABELS[k][uiLocale] || FILTER_FIELD_KEY_LABELS[k].en;
     }
+
     let s = k.replace(/_/g, " ");
     s = s.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
     s = s.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+
     const lowered = s.toLowerCase().trim();
     if (!lowered) {
       return "";
     }
-    // Title-case words, keep separators readable.
+
     return lowered
       .split(" ")
       .map(function (part) {
@@ -382,33 +462,87 @@ export default function HomePage() {
     });
   }
 
+  function reorderSelectedFilters(fromId, toId) {
+    if (!fromId || !toId || fromId === toId) {
+      return;
+    }
+
+    setSelectedFilters(function (prev) {
+      const fromIndex = prev.findIndex(function (f) {
+        return f.id === fromId;
+      });
+      const toIndex = prev.findIndex(function (f) {
+        return f.id === toId;
+      });
+
+      if (fromIndex < 0 || toIndex < 0) {
+        return prev;
+      }
+
+      const next = prev.slice();
+      const moved = next.splice(fromIndex, 1)[0];
+      next.splice(toIndex, 0, moved);
+
+      return next.map(function (item, index) {
+        return { ...item, sortOrder: index + 1 };
+      });
+    });
+  }
+
+  function moveSelectedFilterBy(filterId, delta) {
+    if (!filterId || !delta) {
+      return;
+    }
+
+    setSelectedFilters(function (prev) {
+      const fromIndex = prev.findIndex(function (f) {
+        return f.id === filterId;
+      });
+
+      if (fromIndex < 0) {
+        return prev;
+      }
+
+      const toIndex = Math.max(0, Math.min(prev.length - 1, fromIndex + delta));
+      if (toIndex === fromIndex) {
+        return prev;
+      }
+
+      const next = prev.slice();
+      const moved = next.splice(fromIndex, 1)[0];
+      next.splice(toIndex, 0, moved);
+
+      return next.map(function (item, index) {
+        return { ...item, sortOrder: index + 1 };
+      });
+    });
+  }
+
   async function saveConfig() {
-    const L = STRINGS[uiLocale];
+    const L = STRINGS[uiLocale] || STRINGS.en;
+
     try {
       setSaving(true);
       setSaveMessage("");
 
-      const response = await fetch(
-        `/api/config?shop=${encodeURIComponent(shop)}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      const response = await authenticatedFetch("/api/config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          enabled: true,
+          showSorting: true,
+          grid: {
+            mobile: 2,
+            tablet: 3,
+            desktop: 4,
           },
-          body: JSON.stringify({
-            enabled: true,
-            showSorting: true,
-            grid: {
-              mobile: 2,
-              tablet: 3,
-              desktop: 4,
-            },
-            filters: selectedFilters,
-          }),
-        }
-      );
+          filters: selectedFilters,
+        }),
+      });
 
-      const json = await response.json();
+      const json = await readJsonSafely(response, L.configSaveFailed);
 
       if (!json.ok) {
         throw new Error(json.error || L.configSaveFailed);
@@ -416,7 +550,7 @@ export default function HomePage() {
 
       setSaveMessage(L.saveSuccess);
     } catch (err) {
-      setSaveMessage(err.message || L.genericError);
+      setSaveMessage(normalizeErrorMessage(err, uiLocale));
     } finally {
       setSaving(false);
     }
@@ -428,7 +562,9 @@ export default function HomePage() {
     if (!searchQ) {
       return true;
     }
+
     const label = getFilterLabel(filter).toLowerCase();
+
     return (
       label.includes(searchQ) ||
       String(filter.key || "").toLowerCase().includes(searchQ) ||
@@ -441,6 +577,7 @@ export default function HomePage() {
     if (!searchQ) {
       return true;
     }
+
     const blob = [
       item.name,
       item.namespace,
@@ -453,6 +590,7 @@ export default function HomePage() {
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
+
     return blob.includes(searchQ);
   }
 
@@ -516,7 +654,7 @@ export default function HomePage() {
     transition: "background 0.15s ease, color 0.15s ease",
   };
 
-  const C = STRINGS[uiLocale];
+  const C = STRINGS[uiLocale] || STRINGS.en;
   const saveMsgOk =
     saveMessage === STRINGS.en.saveSuccess || saveMessage === STRINGS.tr.saveSuccess;
 
@@ -528,7 +666,6 @@ export default function HomePage() {
           50% { opacity: 1; }
         }
 
-        /* Mobile layout fixes */
         @media (max-width: 520px) {
           .uf-nav-inner {
             flex-wrap: wrap;
@@ -571,8 +708,16 @@ export default function HomePage() {
             position: static !important;
             top: auto !important;
           }
+          .uf-reorder-buttons {
+            display: inline-flex !important;
+          }
+        }
+
+        .uf-reorder-buttons {
+          display: none;
         }
       `}</style>
+
       <main
         style={{
           minHeight: "100vh",
@@ -632,6 +777,7 @@ export default function HomePage() {
               </span>
               {C.backToShop}
             </button>
+
             <div
               className="uf-logo-box"
               style={{
@@ -657,6 +803,7 @@ export default function HomePage() {
                 style={{ display: "block", objectFit: "contain" }}
               />
             </div>
+
             <div className="uf-brand" style={{ flex: 1, minWidth: 0 }}>
               <div
                 className="uf-brand-title"
@@ -682,6 +829,7 @@ export default function HomePage() {
                 {C.slogan}
               </div>
             </div>
+
             {shop ? (
               <div
                 title={shop}
@@ -781,6 +929,7 @@ export default function HomePage() {
                   >
                     {C.tabStandard}
                   </button>
+
                   <button
                     type="button"
                     onClick={function () {
@@ -798,9 +947,18 @@ export default function HomePage() {
                 </div>
 
                 <div style={{ padding: "14px 16px 16px" }}>
-                  <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 600, color: t.textMuted }}>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: t.textMuted,
+                    }}
+                  >
                     {C.searchLabel}
                   </label>
+
                   <input
                     type="search"
                     value={filterSearch}
@@ -826,7 +984,15 @@ export default function HomePage() {
                   />
                 </div>
 
-                <div style={{ padding: "0 16px 18px", display: "grid", gap: 12, maxHeight: "min(70vh, 640px)", overflowY: "auto" }}>
+                <div
+                  style={{
+                    padding: "0 16px 18px",
+                    display: "grid",
+                    gap: 12,
+                    maxHeight: "min(70vh, 640px)",
+                    overflowY: "auto",
+                  }}
+                >
                   {activeTab === "standard" ? (
                     standardFiltered.length === 0 ? (
                       <div
@@ -850,9 +1016,13 @@ export default function HomePage() {
 
                         return (
                           <div key={filter.id} style={card}>
-                            <div style={{ fontWeight: 700, fontSize: 15 }}>{getFilterLabel(filter)}</div>
+                            <div style={{ fontWeight: 700, fontSize: 15 }}>
+                              {getFilterLabel(filter)}
+                            </div>
+
                             <div style={{ fontSize: 13, color: t.textMuted, marginTop: 4 }}>
-                              {formatFilterFieldKey(filter.key)} · {C.typeLabel}: {formatType(filter.type)}
+                              {formatFilterFieldKey(filter.key)} · {C.typeLabel}:{" "}
+                              {formatType(filter.type)}
                             </div>
 
                             <button
@@ -901,9 +1071,7 @@ export default function HomePage() {
                         background: t.surfaceMuted,
                       }}
                     >
-                      {definitions.length === 0
-                        ? C.emptyCustomNone
-                        : C.emptyCustomSearch}
+                      {definitions.length === 0 ? C.emptyCustomNone : C.emptyCustomSearch}
                     </div>
                   ) : (
                     definitionsFiltered.map(function (item) {
@@ -914,17 +1082,29 @@ export default function HomePage() {
                       return (
                         <div key={item.id} style={card}>
                           <div style={{ fontWeight: 700, fontSize: 15 }}>{item.name}</div>
+
                           <div style={{ fontSize: 13, color: t.text, marginTop: 4 }}>
-                            <span style={{ fontFamily: "ui-monospace, monospace" }}>{item.namespace}</span>
+                            <span style={{ fontFamily: "ui-monospace, monospace" }}>
+                              {item.namespace}
+                            </span>
                             <span style={{ color: t.textMuted }}> · </span>
                             <span>{formatFilterFieldKey(item.key)}</span>
                           </div>
+
                           <div style={{ fontSize: 13, color: t.textMuted, marginTop: 4 }}>
-                            {C.typeLabel}: {formatType(item.type)} {item.category ? `(${item.category})` : ""}
+                            {C.typeLabel}: {formatType(item.type)}{" "}
+                            {item.category ? `(${item.category})` : ""}
                           </div>
 
                           {item.description ? (
-                            <div style={{ marginTop: 10, fontSize: 13, color: t.textMuted, lineHeight: 1.45 }}>
+                            <div
+                              style={{
+                                marginTop: 10,
+                                fontSize: 13,
+                                color: t.textMuted,
+                                lineHeight: 1.45,
+                              }}
+                            >
                               {item.description}
                             </div>
                           ) : null}
@@ -972,6 +1152,7 @@ export default function HomePage() {
                 >
                   {C.selectedTitle}
                 </h2>
+
                 <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted }}>
                   {C.selectedHint}
                 </p>
@@ -993,6 +1174,10 @@ export default function HomePage() {
                 ) : (
                   <div style={{ display: "grid", gap: 10 }}>
                     {selectedFilters.map(function (filter) {
+                      const isDragging = draggingFilterId === filter.id;
+                      const isDragOver =
+                        dragOverFilterId === filter.id && draggingFilterId !== filter.id;
+
                       return (
                         <div
                           key={filter.id}
@@ -1000,17 +1185,152 @@ export default function HomePage() {
                             ...card,
                             background: t.surface,
                             boxShadow: t.shadowSm,
+                            borderColor: isDragOver
+                              ? "rgba(1, 30, 136, 0.35)"
+                              : card.border,
+                            outline: isDragOver
+                              ? "2px solid rgba(1, 30, 136, 0.18)"
+                              : "none",
+                            opacity: isDragging ? 0.65 : 1,
+                            cursor: "grab",
+                          }}
+                          draggable
+                          onDragStart={function (e) {
+                            setDraggingFilterId(filter.id);
+                            setDragOverFilterId(null);
+
+                            try {
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData("text/plain", filter.id);
+                            } catch (error) {
+                              // ignore
+                            }
+                          }}
+                          onDragOver={function (e) {
+                            e.preventDefault();
+                            setDragOverFilterId(filter.id);
+
+                            try {
+                              e.dataTransfer.dropEffect = "move";
+                            } catch (error) {
+                              // ignore
+                            }
+                          }}
+                          onDragLeave={function () {
+                            setDragOverFilterId(function (prev) {
+                              return prev === filter.id ? null : prev;
+                            });
+                          }}
+                          onDrop={function (e) {
+                            e.preventDefault();
+
+                            let fromId = draggingFilterId;
+
+                            try {
+                              const from = e.dataTransfer.getData("text/plain");
+                              if (from) {
+                                fromId = from;
+                              }
+                            } catch (error) {
+                              // ignore
+                            }
+
+                            reorderSelectedFilters(fromId, filter.id);
+                            setDraggingFilterId(null);
+                            setDragOverFilterId(null);
+                          }}
+                          onDragEnd={function () {
+                            setDraggingFilterId(null);
+                            setDragOverFilterId(null);
                           }}
                         >
-                          <div style={{ fontWeight: 700, fontSize: 14 }}>{getFilterLabel(filter)}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div
+                              aria-hidden="true"
+                              title="Drag"
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 8,
+                                border: `1px solid ${t.borderStrong}`,
+                                background: t.surfaceMuted,
+                                display: "grid",
+                                placeItems: "center",
+                                color: t.textMuted,
+                                flexShrink: 0,
+                                cursor: "grab",
+                                userSelect: "none",
+                              }}
+                            >
+                              ⋮⋮
+                            </div>
+
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 700, fontSize: 14 }}>
+                                {getFilterLabel(filter)}
+                              </div>
+                            </div>
+
+                            <div className="uf-reorder-buttons" style={{ gap: 6, flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={function (e) {
+                                  e.stopPropagation();
+                                  moveSelectedFilterBy(filter.id, -1);
+                                }}
+                                title={C.moveUp}
+                                aria-label={C.moveUp}
+                                style={{
+                                  width: 30,
+                                  height: 30,
+                                  borderRadius: 9,
+                                  border: `1px solid ${t.borderStrong}`,
+                                  background: t.surface,
+                                  color: t.text,
+                                  cursor: "pointer",
+                                  fontWeight: 700,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                ↑
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={function (e) {
+                                  e.stopPropagation();
+                                  moveSelectedFilterBy(filter.id, 1);
+                                }}
+                                title={C.moveDown}
+                                aria-label={C.moveDown}
+                                style={{
+                                  width: 30,
+                                  height: 30,
+                                  borderRadius: 9,
+                                  border: `1px solid ${t.borderStrong}`,
+                                  background: t.surface,
+                                  color: t.text,
+                                  cursor: "pointer",
+                                  fontWeight: 700,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          </div>
+
                           <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
                             {filter.namespace ? (
                               <>
-                                <span style={{ fontFamily: "ui-monospace, monospace" }}>{filter.namespace}</span>
+                                <span style={{ fontFamily: "ui-monospace, monospace" }}>
+                                  {filter.namespace}
+                                </span>
                                 <span> · </span>
                               </>
                             ) : null}
-                            {formatFilterFieldKey(filter.key)} · {C.typeLabel}: {formatType(filter.type)}
+                            {formatFilterFieldKey(filter.key)} · {C.typeLabel}:{" "}
+                            {formatType(filter.type)}
                           </div>
 
                           <button
@@ -1042,7 +1362,9 @@ export default function HomePage() {
                     opacity: saving ? 0.85 : 1,
                   }}
                   onMouseOver={function (e) {
-                    if (!saving) e.currentTarget.style.background = t.accentHover;
+                    if (!saving) {
+                      e.currentTarget.style.background = t.accentHover;
+                    }
                   }}
                   onMouseOut={function (e) {
                     e.currentTarget.style.background = t.accent;
@@ -1061,7 +1383,9 @@ export default function HomePage() {
                       background: saveMsgOk ? "#ecfdf5" : "#fef2f2",
                       color: saveMsgOk ? "#065f46" : "#991b1b",
                       border: `1px solid ${
-                        saveMsgOk ? "rgba(5, 150, 105, 0.2)" : "rgba(220, 38, 38, 0.15)"
+                        saveMsgOk
+                          ? "rgba(5, 150, 105, 0.2)"
+                          : "rgba(220, 38, 38, 0.15)"
                       }`,
                     }}
                   >

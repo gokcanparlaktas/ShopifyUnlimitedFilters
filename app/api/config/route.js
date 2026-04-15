@@ -1,4 +1,10 @@
 import { adminGraphQL } from "../../../lib/shopify-admin";
+import {
+  getSessionTokenFromRequest,
+  verifySessionToken,
+  getShopFromSessionTokenPayload,
+  SessionAuthError,
+} from "../../../lib/shopify-session";
 
 const NAMESPACE = "unlimited_filters";
 const KEY = "config";
@@ -7,8 +13,20 @@ function buildCorsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
+}
+
+function getAuthenticatedSession(request) {
+  const token = getSessionTokenFromRequest(request);
+  const payload = verifySessionToken(token);
+  const shop = getShopFromSessionTokenPayload(payload);
+
+  return { shop, sessionToken: token };
+}
+
+function isAuthError(error) {
+  return error instanceof SessionAuthError;
 }
 
 function getDefaultConfig() {
@@ -24,9 +42,9 @@ function getDefaultConfig() {
   };
 }
 
-async function getShopId(shop) {
+async function getShopData(shop, sessionToken) {
   const query = `
-    query GetShopId {
+    query GetShopData {
       shop {
         id
         metafield(namespace: "${NAMESPACE}", key: "${KEY}") {
@@ -36,7 +54,7 @@ async function getShopId(shop) {
     }
   `;
 
-  const data = await adminGraphQL(shop, query);
+  const data = await adminGraphQL(shop, sessionToken, query);
 
   return {
     shopId: data?.shop?.id || "",
@@ -44,8 +62,32 @@ async function getShopId(shop) {
   };
 }
 
+function parseStoredConfig(existingConfigValue) {
+  if (!existingConfigValue) {
+    return getDefaultConfig();
+  }
+
+  try {
+    const parsed = JSON.parse(existingConfigValue);
+
+    return {
+      enabled: parsed?.enabled ?? true,
+      showSorting: parsed?.showSorting ?? true,
+      grid: parsed?.grid || {
+        mobile: 2,
+        tablet: 3,
+        desktop: 4,
+      },
+      filters: Array.isArray(parsed?.filters) ? parsed.filters : [],
+    };
+  } catch (error) {
+    return getDefaultConfig();
+  }
+}
+
 export async function OPTIONS(request) {
   const origin = request.headers.get("origin");
+
   return new Response(null, {
     status: 204,
     headers: buildCorsHeaders(origin),
@@ -54,41 +96,16 @@ export async function OPTIONS(request) {
 
 export async function GET(request) {
   const origin = request.headers.get("origin");
-  const { searchParams } = new URL(request.url);
-  const shop = searchParams.get("shop");
-
-  if (!shop) {
-    return Response.json(
-      {
-        ok: false,
-        error: "shop parametresi gerekli",
-      },
-      {
-        status: 400,
-        headers: buildCorsHeaders(origin),
-      }
-    );
-  }
 
   try {
-    const { existingConfigValue } = await getShopId(shop);
-
-    if (!existingConfigValue) {
-      return Response.json(
-        {
-          ok: true,
-          config: getDefaultConfig(),
-        },
-        {
-          headers: buildCorsHeaders(origin),
-        }
-      );
-    }
+    const { shop, sessionToken } = getAuthenticatedSession(request);
+    const { existingConfigValue } = await getShopData(shop, sessionToken);
+    const config = parseStoredConfig(existingConfigValue);
 
     return Response.json(
       {
         ok: true,
-        config: JSON.parse(existingConfigValue),
+        config,
       },
       {
         headers: buildCorsHeaders(origin),
@@ -98,10 +115,10 @@ export async function GET(request) {
     return Response.json(
       {
         ok: false,
-        error: error.message,
+        error: error?.message || "Config alınamadı",
       },
       {
-        status: 500,
+        status: isAuthError(error) ? 401 : 500,
         headers: buildCorsHeaders(origin),
       }
     );
@@ -110,37 +127,23 @@ export async function GET(request) {
 
 export async function POST(request) {
   const origin = request.headers.get("origin");
-  const { searchParams } = new URL(request.url);
-  const shop = searchParams.get("shop");
-
-  if (!shop) {
-    return Response.json(
-      {
-        ok: false,
-        error: "shop parametresi gerekli",
-      },
-      {
-        status: 400,
-        headers: buildCorsHeaders(origin),
-      }
-    );
-  }
 
   try {
+    const { shop, sessionToken } = getAuthenticatedSession(request);
     const body = await request.json();
 
     const config = {
-      enabled: body.enabled ?? true,
-      showSorting: body.showSorting ?? true,
-      grid: body.grid || {
+      enabled: body?.enabled ?? true,
+      showSorting: body?.showSorting ?? true,
+      grid: body?.grid || {
         mobile: 2,
         tablet: 3,
         desktop: 4,
       },
-      filters: Array.isArray(body.filters) ? body.filters : [],
+      filters: Array.isArray(body?.filters) ? body.filters : [],
     };
 
-    const { shopId } = await getShopId(shop);
+    const { shopId } = await getShopData(shop, sessionToken);
 
     if (!shopId) {
       throw new Error("shop.id alınamadı");
@@ -175,11 +178,11 @@ export async function POST(request) {
       ],
     };
 
-    const data = await adminGraphQL(shop, query, variables);
+    const data = await adminGraphQL(shop, sessionToken, query, variables);
     const userErrors = data?.metafieldsSet?.userErrors || [];
 
     if (userErrors.length > 0) {
-      throw new Error(userErrors[0].message || "Config kaydedilemedi");
+      throw new Error(userErrors[0]?.message || "Config kaydedilemedi");
     }
 
     return Response.json(
@@ -195,10 +198,10 @@ export async function POST(request) {
     return Response.json(
       {
         ok: false,
-        error: error.message,
+        error: error?.message || "Config kaydedilemedi",
       },
       {
-        status: 500,
+        status: isAuthError(error) ? 401 : 500,
         headers: buildCorsHeaders(origin),
       }
     );

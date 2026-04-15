@@ -1,41 +1,47 @@
 import { adminGraphQL } from "../../../lib/shopify-admin";
 import { metafieldDefinitionToFilter } from "../../../lib/filter-mappers";
+import {
+  getSessionTokenFromRequest,
+  verifySessionToken,
+  getShopFromSessionTokenPayload,
+  SessionAuthError,
+} from "../../../lib/shopify-session";
+
+function getAuthenticatedSession(request) {
+  const token = getSessionTokenFromRequest(request);
+  const payload = verifySessionToken(token);
+  const shop = getShopFromSessionTokenPayload(payload);
+
+  return { shop, sessionToken: token };
+}
+
+function isAuthError(error) {
+  return error instanceof SessionAuthError;
+}
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const shop = searchParams.get("shop");
+  try {
+    const { shop, sessionToken } = getAuthenticatedSession(request);
 
-  if (!shop) {
-    return Response.json(
-      {
-        ok: false,
-        error: "shop parametresi gerekli"
-      },
-      { status: 400 }
-    );
-  }
-
-  const query = `
-    query ProductMetafieldDefinitions {
-      metafieldDefinitions(first: 100, ownerType: PRODUCT) {
-        nodes {
-          id
-          name
-          namespace
-          key
-          description
-          type {
+    const query = `
+      query ProductMetafieldDefinitions {
+        metafieldDefinitions(first: 100, ownerType: PRODUCT) {
+          nodes {
+            id
             name
-            category
+            namespace
+            key
+            description
+            type {
+              name
+              category
+            }
           }
         }
       }
-    }
-  `;
+    `;
 
-  try {
-    const data = await adminGraphQL(shop, query);
-
+    const data = await adminGraphQL(shop, sessionToken, query);
     const nodes = data?.metafieldDefinitions?.nodes || [];
 
     const definitions = nodes.map((item, index) => ({
@@ -52,23 +58,25 @@ export async function GET(request) {
           namespace: item.namespace,
           key: item.key,
           type: item.type?.name || "",
-          category: item.type?.category || ""
+          category: item.type?.category || "",
         },
         index + 1
-      )
+      ),
     }));
 
     return Response.json({
       ok: true,
-      definitions
+      definitions,
     });
   } catch (error) {
     return Response.json(
       {
         ok: false,
-        error: error.message
+        error: error?.message || "Metafield definitions alınamadı",
       },
-      { status: 500 }
+      {
+        status: isAuthError(error) ? 401 : 500,
+      }
     );
   }
 }
