@@ -45,6 +45,7 @@ const STRINGS = {
     showSorting: "Show sorting",
     showSearch: "Show search",
     accordionOpen: "Open filter accordions by default",
+    perFilterAccordionOpen: "Accordion open",
   },
   tr: {
     brandTitle: "Unlimited Filters",
@@ -85,6 +86,7 @@ const STRINGS = {
     showSorting: "Sıralamayı göster",
     showSearch: "Aramayı göster",
     accordionOpen: "Filtre accordion'ları varsayılan olarak açık olsun",
+    perFilterAccordionOpen: "Bu filtre açık başlasın",
   },
 };
 
@@ -276,10 +278,18 @@ export default function HomePage() {
         const config = configJson.config || {};
         const filters = Array.isArray(config.filters) ? config.filters : [];
 
-        setSelectedFilters(filters);
+        const defaultAccordionOpen = config.filterAccordionDefaultOpen !== false;
+        setSelectedFilters(
+          filters.map(function (f) {
+            if (typeof f?.accordionOpen === "boolean") {
+              return f;
+            }
+            return { ...f, accordionOpen: defaultAccordionOpen };
+          })
+        );
         setShowSorting(config.showSorting !== false);
         setShowSearch(config.showSearch !== false);
-        setFilterAccordionDefaultOpen(config.filterAccordionDefaultOpen !== false);
+        setFilterAccordionDefaultOpen(defaultAccordionOpen);
       } catch (err) {
         if (cancelled) {
           return;
@@ -458,6 +468,7 @@ export default function HomePage() {
       return prev.concat({
         ...filter,
         sortOrder: prev.length + 1,
+        accordionOpen: filterAccordionDefaultOpen,
       });
     });
   }
@@ -1295,6 +1306,35 @@ export default function HomePage() {
                               <div style={{ fontWeight: 700, fontSize: 14 }}>
                                 {getFilterLabel(filter)}
                               </div>
+                              <label
+                                style={{
+                                  marginTop: 6,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  fontSize: 12,
+                                  color: t.textMuted,
+                                  userSelect: "none",
+                                }}
+                                onClick={function (e) {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={filter.accordionOpen !== false}
+                                  onChange={function (e) {
+                                    const next = Boolean(e.target.checked);
+                                    setSelectedFilters(function (prev) {
+                                      return prev.map(function (item) {
+                                        if (item.id !== filter.id) return item;
+                                        return { ...item, accordionOpen: next };
+                                      });
+                                    });
+                                  }}
+                                />
+                                <span>{C.perFilterAccordionOpen}</span>
+                              </label>
                             </div>
 
                             <div className="uf-reorder-buttons" style={{ gap: 6, flexShrink: 0 }}>
