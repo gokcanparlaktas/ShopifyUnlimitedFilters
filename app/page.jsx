@@ -826,90 +826,97 @@ export default function HomePage() {
               maxWidth: 1120,
               margin: "0 auto",
               padding: "14px 20px",
-              display: "flex",
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
               alignItems: "center",
               gap: 16,
             }}
           >
-            <button
-              type="button"
-              onClick={goBackToShopify}
-              disabled={!shop}
-              className="uf-back-btn"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                height: 40,
-                padding: "0 12px",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.18)",
-                background: "rgba(255,255,255,0.10)",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: shop ? "pointer" : "not-allowed",
-                opacity: shop ? 1 : 0.55,
-                fontFamily: t.font,
-                whiteSpace: "nowrap",
-              }}
-              title={shop ? `https://${shop}/admin` : undefined}
-            >
-              <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
-                ←
-              </span>
-              {C.backToShop}
-            </button>
-
-            <div
-              className="uf-logo-box"
-              style={{
-                width: 68,
-                height: 68,
-                borderRadius: 14,
-                background: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                boxShadow: "inset 0 0 0 1px rgba(1, 30, 136, 0.08)",
-                padding: 2,
-                boxSizing: "border-box",
-              }}
-            >
-              <img
-                src="/icon.svg"
-                alt={C.brandTitle}
-                width={64}
-                height={64}
-                className="uf-logo-img"
-                style={{ display: "block", objectFit: "contain" }}
-              />
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={function () {
+                  const el = document.getElementById("uf-howto");
+                  if (el && typeof el.scrollIntoView === "function") {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  height: 40,
+                  padding: "0 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(255,255,255,0.10)",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: t.font,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
+                  ?
+                </span>
+                {C.howToUse}
+              </button>
             </div>
 
-            <div className="uf-brand" style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center" }}>
               <div
-                className="uf-brand-title"
+                className="uf-logo-box"
                 style={{
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 18,
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1.2,
+                  width: 68,
+                  height: 68,
+                  borderRadius: 14,
+                  background: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  boxShadow: "inset 0 0 0 1px rgba(1, 30, 136, 0.08)",
+                  padding: 2,
+                  boxSizing: "border-box",
                 }}
               >
-                {C.brandTitle}
+                <img
+                  src="/icon.svg"
+                  alt={C.brandTitle}
+                  width={64}
+                  height={64}
+                  className="uf-logo-img"
+                  style={{ display: "block", objectFit: "contain" }}
+                />
               </div>
-              <div
-                className="uf-brand-slogan"
-                style={{
-                  marginTop: 4,
-                  color: "rgba(255,255,255,0.72)",
-                  fontSize: 13,
-                  lineHeight: 1.35,
-                }}
-              >
-                {C.slogan}
+
+              <div className="uf-brand" style={{ minWidth: 0, textAlign: "left" }}>
+                <div
+                  className="uf-brand-title"
+                  style={{
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: 18,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {C.brandTitle}
+                </div>
+                <div
+                  className="uf-brand-slogan"
+                  style={{
+                    marginTop: 4,
+                    color: "rgba(255,255,255,0.72)",
+                    fontSize: 13,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {C.slogan}
+                </div>
               </div>
             </div>
 
@@ -929,6 +936,7 @@ export default function HomePage() {
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                   flexShrink: 0,
+                  justifySelf: "end",
                 }}
               >
                 {formatShopName(shop)}
@@ -1246,6 +1254,7 @@ export default function HomePage() {
               </div>
 
               <aside
+                id="uf-howto"
                 style={{
                   ...panel,
                   position: "sticky",
