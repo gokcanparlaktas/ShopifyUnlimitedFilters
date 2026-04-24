@@ -8,7 +8,8 @@ This project started as an attempt to bypass filtering limitations in Shopify’
 
 ---
 
-![Demo](assets/demo.gif)
+![Demo](assets/demo2.gif)
+![AdminPanel](assets/demo.gif)
 
 ## 🧩 Features
 
