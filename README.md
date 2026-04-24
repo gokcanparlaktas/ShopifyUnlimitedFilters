@@ -8,61 +8,61 @@ This project started as an attempt to bypass filtering limitations in Shopify’
 
 ---
 
+![Demo](assets/demo.gif)
+
 ## 🧩 Features
 
 ### 🔧 Admin Panel (Shopify Embedded App)
 
-* Manage filters directly inside Shopify Admin
-* Select, sort, and configure:
+- Manage filters directly inside Shopify Admin
+- Select, sort, and configure:
+  - Standard filters
+  - Metafield-based custom filters
 
-  * Standard filters
-  * Metafield-based custom filters
-* Session token validation for secure access
-* Real-time configuration updates reflected in storefront
+- Session token validation for secure access
+- Real-time configuration updates reflected in storefront
 
 #### Configurable UI Options:
 
-* Accordion (open/closed by default)
-* Search input toggle
-* Sorting options
-* Grid column layout
+- Accordion (open/closed by default)
+- Search input toggle
+- Sorting options
+- Grid column layout
 
 ---
 
 ### ⚙️ Backend (Node.js API)
 
-* Built with **Node.js**
-* Stores app settings using **Shopify Metafields**
-* Provides controlled data flow between:
+- Built with **Node.js**
+- Stores app settings using **Shopify Metafields**
+- Provides controlled data flow between:
+  - Shopify Admin
+  - Storefront
 
-  * Shopify Admin
-  * Storefront
-* Deployed on **Vercel**
+- Deployed on **Vercel**
 
 ---
 
 ### 🛍️ Storefront Integration
 
-* Fetches products via **Shopify Storefront API**
-* Dynamically generates filters based on product data
-* Supports:
-
-  * 🔍 Search
-  * ↕️ Sorting
-  * 🎚️ Range filters
-  * ✅ Boolean filters
-  * 🔘 Multi-select filters
+- Fetches products via **Shopify Storefront API**
+- Dynamically generates filters based on product data
+- Supports:
+  - 🔍 Search
+  - ↕️ Sorting
+  - 🎚️ Range filters
+  - ✅ Boolean filters
+  - 🔘 Multi-select filters
 
 ---
 
 ### 🧱 Custom Product Grid
 
-* Fully custom-built product listing system
-* Works seamlessly with filtering logic
-* Planned improvements:
-
-  * Multiple card designs
-  * Flexible layout options
+- Fully custom-built product listing system
+- Works seamlessly with filtering logic
+- Planned improvements:
+  - Multiple card designs
+  - Flexible layout options
 
 ---
 
@@ -82,38 +82,38 @@ Storefront (Dynamic Filters + Product Grid)
 
 ## 🔐 Security
 
-* Session token validation implemented in admin panel
-* API access restricted to authenticated Shopify sessions
-* Sensitive keys managed via environment variables
+- Session token validation implemented in admin panel
+- API access restricted to authenticated Shopify sessions
+- Sensitive keys managed via environment variables
 
 ---
 
 ## ⚡ Tech Stack
 
-* **Frontend:** React (Shopify Embedded App)
-* **Backend:** Node.js / Express
-* **Deployment:** Vercel
-* **API:** Shopify Storefront API & Admin API
-* **State Management:** Context API / Redux Toolkit
-* **Styling:** Tailwind CSS
+- **Frontend:** React (Shopify Embedded App)
+- **Backend:** Node.js / Express
+- **Deployment:** Vercel
+- **API:** Shopify Storefront API & Admin API
+- **State Management:** Context API / Redux Toolkit
+- **Styling:** Tailwind CSS
 
 ---
 
 ## 🚀 Roadmap
 
-* Advanced filter UI components
-* Multiple product card templates
-* Theme customization support
-* Performance optimizations
-* Shopify App Store release
+- Advanced filter UI components
+- Multiple product card templates
+- Theme customization support
+- Performance optimizations
+- Shopify App Store release
 
 ---
 
 ## 🎯 Goals
 
-* Build a reusable and scalable filtering system
-* Provide better UX than default Shopify filters
-* Create a production-ready Shopify app
+- Build a reusable and scalable filtering system
+- Provide better UX than default Shopify filters
+- Create a production-ready Shopify app
 
 ---
 
@@ -123,4 +123,3 @@ Storefront (Dynamic Filters + Product Grid)
 🚀 Planned release on Shopify App Store soon
 
 ---
-
