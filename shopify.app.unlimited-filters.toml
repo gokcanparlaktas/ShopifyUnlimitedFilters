@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "a2fe020d1baf756512031ea57d198dad"
-name = "Unlimited Filters"
+client_id = "076b977e7728705d0cb721d5873a44ed"
+name = "Unlimited Filters & Collection"
 application_url = "https://shopify-unlimited-filters.vercel.app"
 embedded = true
 
