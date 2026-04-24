@@ -18,7 +18,7 @@ This project started as an attempt to bypass filtering limitations in Shopify’
 - Select, sort, and configure:
   - Standard filters
   - Metafield-based custom filters
-
+- Drag-and-drop support for reordering filters
 - Session token validation for secure access
 - Real-time configuration updates reflected in storefront
 
